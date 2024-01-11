@@ -4,7 +4,7 @@ using ClassicalSpinMC: Lattice, read_spin_configuration!, get_bilinear_sites, ge
 """
 Time evolve homogeneous ODE. 
 """
-function timeEvolve!(du, u, p, t)
+function timeEvolve!(du::Vector{Float64}, u::Vector{Float64}, p::Tuple{Lattice, Float64}, t)
     lat = p[1]
     N = lat.size
     alpha = p[2] 
@@ -57,7 +57,7 @@ end
 """
 Time evolve inhomogeneous ODE for 2D spectroscopy.
 """
-function timeEvolve2D!(du::Vector{Float64}, u::Vector{Float64}, p, t)
+function timeEvolve2D!(du::Vector{Float64}, u::Vector{Float64}, p::Tuple{Lattice, Float64, Float64, Function, Function}, t)
     lat = p[1]
     N = lat.size
     alpha = p[2] 
@@ -117,13 +117,11 @@ end
 
 """
     compute_St(ts::Array{Float64}, lat::Lattice; 
-                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, specparams::Dict{String,<:Any}=Dict{String,Any}())
+                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0)
 
 Time evolves spin configuration according to LLG equations. 
 
 Returns S(t) matrix with dims=(N_t, 3N) where N_t is the number of timesteps and N is the number of lattice sites.
-
-Will use `timeEvolve!` by default; to use `timeEvolve2D!`, specify `specparams`. 
 
 # Arguments
 - `ts::Array{Float64}`: time array 
@@ -133,37 +131,46 @@ Will use `timeEvolve!` by default; to use `timeEvolve2D!`, specify `specparams`.
 - `alg=Tsit5()`: ODE solver algorithm for DifferentialEquations solver 
 - `tol::Float64=1e-7`: tolerance for ODE solver 
 - `alpha::Float64=0.0`: damping parameter 
-- `specparams::Dict{String,Any}=Dict{String,Any}()`: if doing 2D spectroscopy, feed dictionary with the keys
-    -`tau::Float64`
-    -`pulseA::Function`
-    -`pulseB::Function`
 """
 function compute_St(ts::Array{Float64}, lat::Lattice; 
-                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, specparams::Dict{String,<:Any}=Dict{String,Any}())
+                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0)
 
     # time evolve the spins 
     s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
     St = zeros(Float64, length(ts), 3*lat.size)
-    params = [lat, alpha]
-
-    if length(specparams) != 0
-        push!(params, specparams["tau"])
-        push!(params, specparams["pulseA"])
-        push!(params, specparams["pulseB"])
-        timeevolve = timeEvolve2D!
-    else 
-        timeevolve = timeEvolve!
-    end
-
+    params = (lat, alpha)
     count = 1
     function perform_measurements!(integrator)
         St[count,:] .= integrator.u
         count += 1
     end
 
-    prob = ODEProblem(timeevolve, s0, (min(ts...), max(ts...)), params)
+    prob = ODEProblem(timeEvolve!, s0, (min(ts...), max(ts...)), params)
     cb = PresetTimeCallback(ts, perform_measurements!)
     
+    # solve ODE 
+    solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false)
+
+    return St 
+end
+
+function compute_St(ts::Array{Float64}, tau::Float64, pulseA::Function, pulseB::Function, lat::Lattice; 
+    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0)
+
+    # time evolve the spins 
+    s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
+    St = zeros(Float64, length(ts), 3*lat.size)
+
+    params = (lat, alpha, tau, pulseA, pulseB)
+    count = 1
+    function perform_measurements!(integrator)
+        St[count,:] .= integrator.u
+        count += 1
+    end
+
+    prob = ODEProblem(timeEvolve2D!, s0, (min(ts...), max(ts...)), params)
+    cb = PresetTimeCallback(ts, perform_measurements!)
+
     # solve ODE 
     solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false)
 

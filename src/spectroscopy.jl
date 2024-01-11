@@ -25,9 +25,9 @@ Run 2D spectroscopy for a single delay time tau.
 - `kwargs`: see `compute_St` documentation 
 """
 function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, B::H; kwargs...)::NTuple{3, Array{Float64,2}} where {H}
-    specA  = compute_St(ts, lat; specparams=Dict("tau"=>tau, "pulseA"=>B, "pulseB"=>x->zeros(Float64,3)), kwargs...)
-    specB  = compute_St(ts[ts .>= 0.0], lat; specparams=Dict("tau"=>0.0, "pulseA"=>x->zeros(Float64,3), "pulseB"=>B), kwargs...)
-    specAB = compute_St(ts, lat; specparams=Dict("tau"=>tau, "pulseA"=>B, "pulseB"=>B), kwargs...)
+    specA  = compute_St(ts, tau, B, x->zeros(Float64,3), lat; kwargs...)
+    specB  = compute_St(ts[ts .>= 0.0], 0.0, x->zeros(Float64,3), B, lat; kwargs...)
+    specAB  = compute_St(ts, tau, B, B, lat; kwargs...)
     MA = compute_magnetization(specA)
     MB = compute_magnetization(specB)
     MAB = compute_magnetization(specAB)
