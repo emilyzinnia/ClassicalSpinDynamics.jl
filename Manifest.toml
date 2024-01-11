@@ -141,11 +141,11 @@ version = "0.5.1"
 
 [[deps.ClassicalSpinMC]]
 deps = ["BinningAnalysis", "Combinatorics", "Dates", "DifferentialEquations", "Einsum", "HDF5", "LinearAlgebra", "MPI", "Permutations", "Printf", "ProgressMeter", "Random", "Statistics"]
-git-tree-sha1 = "fdaa13f11594567fc4a72663d78a5e9fd2db8aef"
+git-tree-sha1 = "4055b5eb9a8e792a2b24795b584e16f0e024e265"
 repo-rev = "main"
 repo-url = "/Users/emilyzhang/Documents/Grad/Research/Programs/classical_julia/ClassicalSpinMC"
 uuid = "91b72e2d-915f-4143-bd56-2ec94b449d37"
-version = "0.1.0"
+version = "1.0.0"
 
 [[deps.CloseOpenIntervals]]
 deps = ["Static", "StaticArrayInterface"]
