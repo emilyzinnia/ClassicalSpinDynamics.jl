@@ -1,2 +1,23 @@
+name = "ClassicalSpinDynamics"
+uuid = "36ab36ff-5d59-485c-bf64-915f2dd16f62"
+authors = ["Emily Zinnia Zhang <ezhang@physics.utoronto.ca>"]
+version = "1.0.0-DEV"
+
 [deps]
+BinningAnalysis = "b7192094-8e58-5052-a244-180a858778ee"
 ClassicalSpinMC = "91b72e2d-915f-4143-bd56-2ec94b449d37"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
+FileWatching = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
