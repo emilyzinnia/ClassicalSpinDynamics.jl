@@ -1,1 +1,1 @@
-# ClassicalSpinDynamics
+# ClassicalSpinDynamics.jl
