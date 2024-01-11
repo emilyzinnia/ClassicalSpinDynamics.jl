@@ -139,7 +139,7 @@ Will use `timeEvolve!` by default; to use `timeEvolve2D!`, specify `specparams`.
     -`pulseB::Function`
 """
 function compute_St(ts::Array{Float64}, lat::Lattice; 
-                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, specparams::Dict{String,<:Any}=Dict{String,<:Any}())
+                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, specparams::Dict{String,<:Any}=Dict{String,Any}())
 
     # time evolve the spins 
     s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
@@ -162,7 +162,7 @@ function compute_St(ts::Array{Float64}, lat::Lattice;
     end
 
     prob = ODEProblem(timeevolve, s0, (min(ts...), max(ts...)), params)
-    cb = PresetTimeCallback(tt, perform_measurements!)
+    cb = PresetTimeCallback(ts, perform_measurements!)
     
     # solve ODE 
     solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false)
