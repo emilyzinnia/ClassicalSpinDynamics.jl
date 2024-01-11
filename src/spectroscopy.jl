@@ -25,9 +25,9 @@ Run 2D spectroscopy for a single delay time tau.
 - `kwargs`: see `compute_St` documentation 
 """
 function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, B::H; kwargs...)::NTuple{3, Array{Float64,2}} where {H}
-    specA  = compute_St(ts, lat, specparams=Dict("tau"=>tau, "pulseA"=>B, "pulseB"=>x->zeros(Float64,3)), kwargs...)
-    specB  = compute_St(ts[ts .>= 0.0], lat, specparams=Dict("tau"=>0.0, "pulseA"=>x->zeros(Float64,3, "pulseB"=>B)), kwargs...)
-    specAB = compute_St(ts, lat, specparams=Dict("tau"=>tau, "pulseA"=>B, "pulseB"=>B), kwargs...)
+    specA  = compute_St(ts, lat; specparams=Dict("tau"=>tau, "pulseA"=>B, "pulseB"=>x->zeros(Float64,3)), kwargs...)
+    specB  = compute_St(ts[ts .>= 0.0], lat; specparams=Dict("tau"=>0.0, "pulseA"=>x->zeros(Float64,3), "pulseB"=>B), kwargs...)
+    specAB = compute_St(ts, lat; specparams=Dict("tau"=>tau, "pulseA"=>B, "pulseB"=>B), kwargs...)
     MA = compute_magnetization(specA)
     MB = compute_magnetization(specB)
     MAB = compute_magnetization(specAB)
@@ -70,7 +70,7 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                 # do spectroscopy for each tau 
                 println("Doing 2D spectroscopy on $file")
                 @showprogress for (ind,tau) in enumerate(taus)
-                    a,b,ab = run2DSpecSingle(lat, ts, tau, B, kwargs...)
+                    a,b,ab = run2DSpecSingle(lat, ts, tau, B; kwargs...)
                     MA[:,:,ind] .= a
                     MB[:,Nt:end,ind] .= b
                     MAB[:,:,ind] .= ab

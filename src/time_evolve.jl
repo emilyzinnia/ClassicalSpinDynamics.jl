@@ -117,7 +117,7 @@ end
 
 """
     compute_St(ts::Array{Float64}, lat::Lattice; 
-                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, specparams::Dict{String,<:Any}=Dict{String,<:Any}())
+                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, specparams::Dict{String,<:Any}=Dict{String,Any}())
 
 Time evolves spin configuration according to LLG equations. 
 
