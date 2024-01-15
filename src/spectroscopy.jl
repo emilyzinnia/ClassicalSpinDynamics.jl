@@ -35,7 +35,7 @@ function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, BA::Fu
     return MA, MB, MAB
 end
 
-function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Float64}, BA::Function, BB::Function; 
+function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Float64}, B::Function, BB::Function; 
                         override=false, kwargs...)
     # check if MPI initialized 
     if MPI.Initialized()
@@ -71,6 +71,7 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                 # do spectroscopy for each tau 
                 println("Doing 2D spectroscopy on $file")
                 @showprogress for (ind,tau) in enumerate(taus)
+                    BA(t) = B(t, tau)
                     a,b,ab = run2DSpecSingle(lat, ts, tau, BA, BB; kwargs...)
                     MA[:,:,ind] .= a
                     MB[:,Nt:end,ind] .= b
