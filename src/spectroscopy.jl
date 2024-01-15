@@ -67,7 +67,7 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                 println("Exits; Skipping $file")
                 continue 
             else
-                read_spin_configuration!(file, lat) # read the spin configurations
+                read_spin_configuration!(lat,file) # read the spin configurations
                 # do spectroscopy for each tau 
                 println("Doing 2D spectroscopy on $file")
                 @showprogress for (ind,tau) in enumerate(taus)
@@ -94,7 +94,7 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
             end 
 
         catch err 
-            println(err.msg)
+            println(err)
             println("Something went wrong, pushing $file back to end of stack")
             pushToStack!(stackfile, file)
         end
