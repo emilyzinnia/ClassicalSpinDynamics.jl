@@ -93,6 +93,7 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
             end 
 
         catch err 
+            println(err.msg)
             println("Something went wrong, pushing $file back to end of stack")
             pushToStack!(stackfile, file)
         end
