@@ -24,17 +24,17 @@ Run 2D spectroscopy for a single delay time tau.
 - `B::Function`: time-dependent function that returns a magnetic field vector 
 - `kwargs`: see `compute_St` documentation 
 """
-function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, B::H; kwargs...)::NTuple{3, Array{Float64,2}} where {H}
-    specA  = compute_St(ts, tau, B, x->zeros(Float64,3), lat; kwargs...)
-    specB  = compute_St(ts[ts .>= 0.0], 0.0, x->zeros(Float64,3), B, lat; kwargs...)
-    specAB  = compute_St(ts, tau, B, B, lat; kwargs...)
+function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, BA::Function, BB::Function; kwargs...)::NTuple{3, Array{Float64,2}}
+    specA  = compute_St(ts, BA, lat; kwargs...)
+    specB  = compute_St(ts[ts .>= 0.0], BB, lat; kwargs...)
+    specAB  = compute_St(ts, BA, BB, lat; kwargs...)
     MA = compute_magnetization(specA)
     MB = compute_magnetization(specB)
     MAB = compute_magnetization(specAB)
     return MA, MB, MAB
 end
 
-function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Float64}, B::Function; 
+function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Float64}, BA::Function, BB::Function; 
                         override=false, kwargs...)
     # check if MPI initialized 
     if MPI.Initialized()
@@ -70,7 +70,7 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                 # do spectroscopy for each tau 
                 println("Doing 2D spectroscopy on $file")
                 @showprogress for (ind,tau) in enumerate(taus)
-                    a,b,ab = run2DSpecSingle(lat, ts, tau, B; kwargs...)
+                    a,b,ab = run2DSpecSingle(lat, ts, tau, BA, BB; kwargs...)
                     MA[:,:,ind] .= a
                     MB[:,Nt:end,ind] .= b
                     MAB[:,:,ind] .= ab
