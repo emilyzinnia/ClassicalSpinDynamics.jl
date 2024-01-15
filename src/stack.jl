@@ -1,5 +1,6 @@
 using FileWatching: watch_file
 using Base.Filesystem
+using ClassicalSpinMC: read_lattice
 
 """
 Pushes file to end of stack 
