@@ -1,6 +1,7 @@
 using HDF5
 using MPI 
 using ProgressMeter
+using ClassicalSpinMC: Lattice, read_spin_configuration!
 
 function compute_magnetization(St::Array{Float64,2})::Array{Float64,2}
     # St is a t x N matrix 
