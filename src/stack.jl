@@ -54,7 +54,6 @@ function lock_file(sharefilename::String)
     lockfilename = sharefilename * ".lock"
     local lockfilehandle 
     while !lockacquired
-        # attempt = 1 
         while isfile(lockfilename)
             # watch_file will notify if the file status changes, waiting until then
             # here we want to wait for the file to get deleted
@@ -113,11 +112,13 @@ function read_lattice_stack(file::String)
     close(f)
     
     lock_file(paramsfile) do (lh, lk)
+        println("Locked for file $file")
         p_ = h5open(paramsfile, "r")
         try
             lat = read_lattice(p_) 
             return lat
         finally
+            println("Unlocked for file $file")
             close(p_)
         end
     end 
