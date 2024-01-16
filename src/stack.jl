@@ -102,13 +102,13 @@ function read_lattice_stack(file::String)
     f = h5open(file, "r") 
     paramsfile = read(attributes(f)["paramsfile"])
     lockname = lock_file(paramsfile) # lock file
+    p_ = h5open(paramsfile, "r")
     try
-        h5open(paramsfile, "r") do p_
-            lat = read_lattice(p_) 
-        end
+        lat = read_lattice(p_) 
         return lat
     finally
         close(f)
+        close(p_)
         unlock_file(lockname) #unlock file
     end
 end
