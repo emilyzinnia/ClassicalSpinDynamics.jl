@@ -93,8 +93,15 @@ Frees up lock to shared file.
 """
 function unlock_file(lockfilehandle, lockfilename)
     # free up the lock so that the other process can acquire it if it needs
-    close(lockfilehandle)
-    Filesystem.unlink(lockfilename)
+    try 
+        close(lockfilehandle)
+        Filesystem.unlink(lockfilename)
+        println("Unlock successful: $lockfilename")
+    catch err 
+        println("Error unlocking: $err")
+        rethrow(err)
+    end 
+
 end
 
 """
