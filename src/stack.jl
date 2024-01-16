@@ -7,10 +7,13 @@ Pushes file to end of stack
 """
 function pushToStack!(stackfile, file)
     lockhandle, lockname = lock_file(stackfile) # lock file
-    open(stackfile, "a") do io # write line to end stack 
-        write(io, "$file\n")
+    try
+        open(stackfile, "a") do io # write line to end stack 
+            write(io, "$file\n")
+        end
+    finally
+        unlock_file(lockhandle, lockname) # unlock file 
     end
-    unlock_file(lockhandle, lockname) # unlock file 
 end
 
 """
@@ -21,16 +24,19 @@ function pullFromStack!(stackfile::String)::String
     sleep_rand(10) # sleep to prevent threads from accessing at the same time 
     lockhandle, lockname = lock_file(stackfile) # lock file
     (tmppath, tmpio) = mktemp(dirname(stackfile)) # make a temporary stackfile
-    open(stackfile) do io
-        push!(file, readline(io)) # read and remove first line from io stream 
-        for line in eachline(io, keep=true) # keep so the new line isn't chomped
-            write(tmpio, line)
+    try
+        open(stackfile) do io
+            push!(file, readline(io)) # read and remove first line from io stream 
+            for line in eachline(io, keep=true) # keep so the new line isn't chomped
+                write(tmpio, line)
+            end
         end
+        mv(tmppath, stackfile, force=true) # overwrite stackfile with first line removed if read successful 
+        return file[1]
+    finally
+        close(tmpio)
+        unlock_file(lockhandle, lockname) # unlock file
     end
-    mv(tmppath, stackfile, force=true) # overwrite stackfile with first line removed if read successful 
-    close(tmpio)
-    unlock_file(lockhandle, lockname) # unlock file
-    return file[1]
 end
 
 """
@@ -92,9 +98,11 @@ function read_lattice_stack(file::String)
     paramsfile = read(attributes(f)["paramsfile"])
     lockhandle, lockname = lock_file(paramsfile) # lock file
     p_ = h5open(paramsfile, "r")
-    lat = read_lattice(p_) # 
-    close(p_)
-    unlock_file(lockhandle, lockname) #unlock file
-    close(f)
-    return lat 
+    try
+        return read_lattice(p_) 
+    finally
+        close(f)
+        close(p_)
+        unlock_file(lockhandle, lockname) #unlock file
+    end
 end
