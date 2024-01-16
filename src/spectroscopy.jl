@@ -48,9 +48,6 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
     end
     # read spin configurtion based on file from the stack 
     file = pullFromStack!(stackfile)
-    
-    # initialize lattice by reading lattice metadata from params file
-    lat = read_lattice_stack(file)
 
     MA = zeros(Float64, 3, size(ts)[1], size(taus)[1])
     MB = copy(MA) 
@@ -65,7 +62,9 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
         if exists && !override # read existing values from file 
             println("Exists; Skipping $file")
         else
-            try
+            try 
+                # initialize lattice by reading lattice metadata from params file
+                lat = read_lattice_stack(file)
                 read_spin_configuration!(lat,file) # read the spin configurations
                 # do spectroscopy for each tau 
                 println("Doing 2D spectroscopy on $file")
