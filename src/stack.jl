@@ -53,8 +53,7 @@ Create a lock to a shared file.
 """
 function lock_file(sharefilename::String)
     lockacquired = false
-    lockfile_location = pwd() * "/"
-    lockfilename = lockfile_location * basename(sharefilename) * ".lock"
+    lockfilename = sharefilename * ".lock"
     local lockfilehandle 
     while !lockacquired
         attempt = 1 
