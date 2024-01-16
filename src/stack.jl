@@ -6,13 +6,11 @@ using ClassicalSpinMC: read_lattice
 Pushes file to end of stack 
 """
 function pushToStack!(stackfile, file)
-    lockname = lock_file(stackfile) # lock file
-    try
+    # lockname = lock_file(stackfile) # lock file
+    lock_file(stackfile) do (lh,lk)
         open(stackfile, "a") do io # write line to end stack 
             write(io, "$file\n")
         end
-    finally
-        unlock_file(lockname) # unlock file 
     end
 end
 
@@ -22,20 +20,20 @@ Reads first line from stackfile and creates new stackfile with first line remove
 function pullFromStack!(stackfile::String)::String
     file = []
     sleep_rand(10) # sleep to prevent threads from accessing at the same time 
-    lockname = lock_file(stackfile) # lock file
-    (tmppath, tmpio) = mktemp(dirname(stackfile)) # make a temporary stackfile
-    try
-        open(stackfile) do io
-            push!(file, readline(io)) # read and remove first line from io stream 
-            for line in eachline(io, keep=true) # keep so the new line isn't chomped
-                write(tmpio, line)
+    lock_file(stackfile) do (lh,lk)
+        (tmppath, tmpio) = mktemp(dirname(stackfile)) # make a temporary stackfile
+        try
+            open(stackfile) do io
+                push!(file, readline(io)) # read and remove first line from io stream 
+                for line in eachline(io, keep=true) # keep so the new line isn't chomped
+                    write(tmpio, line)
+                end
             end
+            mv(tmppath, stackfile, force=true) # overwrite stackfile with first line removed if read successful 
+            return file[1]
+        finally
+            close(tmpio)
         end
-        mv(tmppath, stackfile, force=true) # overwrite stackfile with first line removed if read successful 
-        return file[1]
-    finally
-        close(tmpio)
-        unlock_file(lockname) # unlock file
     end
 end
 
@@ -61,32 +59,41 @@ function lock_file(sharefilename::String)
             # watch_file will notify if the file status changes, waiting until then
             # here we want to wait for the file to get deleted
             println("$sharefilename locked, idling...")
-            watch_file(lockfilename, 5.0) # timeout after 10 seconds 
+            watch_file(lockfilename, 5.0) # timeout after 5 seconds 
         end
         try
             # try to acquire the lock by creating lock file with JL_O_EXCL (exclusive)
             lockfilehandle = Filesystem.open(lockfilename, JL_O_CREAT | JL_O_EXCL, 0o600)
             lockacquired = true
-            close(lockfilehandle)
         catch err
             # in case the file was created between our `isfile` check above and the
             # `Filesystem.open` call, we'll get an IOError with error code `UV_EEXIST`.
             # In that case, we loop and try again. 
-            if err isa IOError && err.code == Base.UV_EEXIST
+            if err isa LoadError && err.code == Base.UV_EEXIST
                 continue
             else
                 rethrow()
             end
         end
     end
-    return lockfilename
+    return lockfilehandle, lockfilename
+end
+
+function lock_file(f::Function, filename::String)
+    io = lock_file(filename)
+    try
+        f(io)
+    finally
+        unlock_file(io...)
+    end
 end
 
 """
 Frees up lock to shared file. 
 """
-function unlock_file(lockfilename)
+function unlock_file(lockfilehandle, lockfilename)
     # free up the lock so that the other process can acquire it if it needs
+    close(lockfilehandle)
     Filesystem.unlink(lockfilename)
 end
 
@@ -97,15 +104,14 @@ function read_lattice_stack(file::String)
     f = h5open(file, "r") 
     paramsfile = read(attributes(f)["paramsfile"])
     close(f)
-
-    lockname = lock_file(paramsfile) # lock file
-    sleep_rand(4)
-    p_ = h5open(paramsfile, "r")
-    try
-        lat = read_lattice(p_) 
-        return lat
-    finally
-        close(p_)
-        unlock_file(lockname) #unlock file
-    end
+    
+    lock_file(paramsfile) do (lh, lk)
+        p_ = h5open(paramsfile, "r")
+        try
+            lat = read_lattice(p_) 
+            return lat
+        finally
+            close(p_)
+        end
+    end 
 end
