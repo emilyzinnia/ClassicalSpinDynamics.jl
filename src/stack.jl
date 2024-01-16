@@ -96,6 +96,8 @@ Reads file from stack and returns lattice object (threadsafe).
 function read_lattice_stack(file::String)
     f = h5open(file, "r") 
     paramsfile = read(attributes(f)["paramsfile"])
+    close(f)
+
     lockname = lock_file(paramsfile) # lock file
     sleep_rand(4)
     p_ = h5open(paramsfile, "r")
@@ -103,7 +105,6 @@ function read_lattice_stack(file::String)
         lat = read_lattice(p_) 
         return lat
     finally
-        close(f)
         close(p_)
         unlock_file(lockname) #unlock file
     end

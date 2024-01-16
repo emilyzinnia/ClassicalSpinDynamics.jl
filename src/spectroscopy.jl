@@ -58,15 +58,14 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
     Nt = size(taus)[1]+1
 
     while length(file) > 0
-        try
-            # if override and exists, skip the file 
-            f = h5open(file, "r+") 
-            exists = haskey(f, "spectroscopy")
-            close(f)
-            if exists && !override # read existing values from file 
-                println("Exits; Skipping $file")
-                continue 
-            else
+        f = h5open(file, "r+") 
+        exists = haskey(f, "spectroscopy")
+        close(f)
+        # if override and exists, skip the file 
+        if exists && !override # read existing values from file 
+            println("Exists; Skipping $file")
+        else
+            try
                 read_spin_configuration!(lat,file) # read the spin configurations
                 # do spectroscopy for each tau 
                 println("Doing 2D spectroscopy on $file")
@@ -92,14 +91,12 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                         end
                     end
                 end
-            end 
-
-        catch err 
-            println("Something went wrong, pushing $file back to end of stack")
-            pushToStack!(stackfile, file)
-            rethrow(err)
+            catch err 
+                println("Something went wrong, pushing $file back to end of stack")
+                pushToStack!(stackfile, file)
+                rethrow(err)
+            end
         end
-
         # pull next file from stack 
         file = pullFromStack!(stackfile) 
         attempts = 0 
