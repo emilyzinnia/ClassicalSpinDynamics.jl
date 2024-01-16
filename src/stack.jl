@@ -56,16 +56,16 @@ function lock_file(sharefilename::String)
     lockfilename = sharefilename * ".lock"
     local lockfilehandle 
     while !lockacquired
-        attempt = 1 
+        # attempt = 1 
         while isfile(lockfilename)
             # watch_file will notify if the file status changes, waiting until then
             # here we want to wait for the file to get deleted
             println("$sharefilename locked, idling...")
             watch_file(lockfilename, 10.0) # timeout after 10 seconds 
-            attempt += 1 
-            if attempt > 5 #force remove lockfile if idling too many times 
-                rm(lockfilename, force=true)
-            end 
+            # attempt += 1 
+            # if attempt > 5 #force remove lockfile if idling too many times 
+            #     rm(lockfilename, force=true)
+            # end 
         end
         try
             # try to acquire the lock by creating lock file with JL_O_EXCL (exclusive)
