@@ -69,7 +69,7 @@ function lock_file(sharefilename::String)
             # in case the file was created between our `isfile` check above and the
             # `Filesystem.open` call, we'll get an IOError with error code `UV_EEXIST`.
             # In that case, we loop and try again. 
-            if err isa LoadError && err.code == Base.UV_EEXIST
+            if err isa Base.IOError && err.code == Base.UV_EEXIST
                 continue
             else
                 rethrow()
