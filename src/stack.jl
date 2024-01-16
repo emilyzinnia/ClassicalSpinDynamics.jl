@@ -61,16 +61,13 @@ function lock_file(sharefilename::String)
             # watch_file will notify if the file status changes, waiting until then
             # here we want to wait for the file to get deleted
             println("$sharefilename locked, idling...")
-            watch_file(lockfilename, 10.0) # timeout after 10 seconds 
-            # attempt += 1 
-            # if attempt > 5 #force remove lockfile if idling too many times 
-            #     rm(lockfilename, force=true)
-            # end 
+            watch_file(lockfilename, 5.0) # timeout after 10 seconds 
         end
         try
             # try to acquire the lock by creating lock file with JL_O_EXCL (exclusive)
             lockfilehandle = Filesystem.open(lockfilename, JL_O_CREAT | JL_O_EXCL, 0o600)
             lockacquired = true
+            close(lockfilehandle)
         catch err
             # in case the file was created between our `isfile` check above and the
             # `Filesystem.open` call, we'll get an IOError with error code `UV_EEXIST`.
@@ -80,8 +77,6 @@ function lock_file(sharefilename::String)
             else
                 rethrow()
             end
-        finally 
-            close(lockfilehandle)
         end
     end
     return lockfilename
@@ -102,6 +97,7 @@ function read_lattice_stack(file::String)
     f = h5open(file, "r") 
     paramsfile = read(attributes(f)["paramsfile"])
     lockname = lock_file(paramsfile) # lock file
+    sleep_rand(4)
     p_ = h5open(paramsfile, "r")
     try
         lat = read_lattice(p_) 
