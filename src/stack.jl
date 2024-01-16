@@ -95,9 +95,7 @@ function unlock_file(lockfilehandle, lockfilename)
     try 
         close(lockfilehandle)
         Filesystem.unlink(lockfilename)
-        println("Unlock successful: $lockfilename")
     catch err 
-        println("Error unlocking: $err")
         rethrow(err)
     end 
 
@@ -109,17 +107,12 @@ Reads file from stack and returns lattice object (threadsafe).
 function read_lattice_stack(file::String)
     f = h5open(file, "r") 
     paramsfile = read(attributes(f)["paramsfile"])
-    close(f)
-    
-    lock_file(paramsfile) do (lh, lk)
-        println("Locked for file $file")
-        p_ = h5open(paramsfile, "r")
-        try
-            lat = read_lattice(p_) 
-            return lat
-        finally
-            println("Unlocked for file $file")
-            close(p_)
-        end
-    end 
+    p_ = h5open(paramsfile, "r")
+    try
+        lat = read_lattice(p_) 
+        return lat
+    finally
+        close(p_)
+        close(f)
+    end
 end
