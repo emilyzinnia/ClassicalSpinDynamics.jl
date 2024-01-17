@@ -1,18 +1,13 @@
-import os 
-import sys
-import h5py 
+
 import numpy as np
 from numpy import array as npa
-src = "/Users/emilyzhang/Documents/Grad/Research/Programs/classical_julia/ClassicalSpinMC/util"
-if not src in sys.path:
-    sys.path.insert(0,src)
-    import pandas as pd 
-from load import * 
+from numpy import imag, sqrt, real
 import matplotlib.pyplot as pl 
 from matplotlib import colors 
-from scipy.fft import fft, fftshift, ifft, ifftshift, fftfreq, fft2
+from scipy.fft import fftshift, fftfreq, fft2
 from scipy.constants import pi
-from numpy import exp, imag, sqrt, real
+
+from load import * 
 
 def get_2D_spectroscopy_data(filename, R=np.eye(3)):
     data = SimData(filename)
