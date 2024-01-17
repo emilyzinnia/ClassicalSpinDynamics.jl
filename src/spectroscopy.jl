@@ -1,7 +1,9 @@
 using HDF5
 using MPI 
 using ProgressMeter
-using ClassicalSpinMC: Lattice, read_spin_configuration!
+using ClassicalSpinMC: Lattice, read_spin_configuration!, overwrite_keys!
+using Logging 
+using Printf
 
 function compute_magnetization(St::Array{Float64,2})::Array{Float64,2}
     # St is a t x N matrix 
@@ -36,7 +38,7 @@ function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, BA::Fu
 end
 
 function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Float64}, B::Function, BB::Function; 
-                        override=false, kwargs...)
+                        override=false, debug=false, report_interval=100, kwargs...)
     # check if MPI initialized 
     if MPI.Initialized()
         comm = MPI.COMM_WORLD
@@ -54,6 +56,17 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
     MAB = copy(MA)
     Nt = size(taus)[1]+1
 
+    # initialize logging 
+    logfilepath = dirname(file) * "/logs"
+    try 
+        rank == 0 && !isfile(logfilepath) && mkdir(logfilepath)
+    catch err
+        # If multiple threads attempt to create the file at the same time and it already exists, skip 
+        if !(err isa Base.IOError && err.code == Base.UV_EEXIST)
+            rethrow(err)
+        end
+    end 
+
     while length(file) > 0
         f = h5open(file, "r+") 
         exists = haskey(f, "spectroscopy")
@@ -62,38 +75,66 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
         if exists && !override # read existing values from file 
             println("Exists; Skipping $file")
         else
+            # create a new logfile
+            logfilename = logfilepath * "/" * basename(file) * ".log"
+            logio = open(logfilename, "w") 
+            logger = debug ? ConsoleLogger(logio, Logging.Debug) : ConsoleLogger(logio, Logging.Info)
             try 
                 # initialize lattice by reading lattice metadata from params file
-                lat = read_lattice_stack(file)
-                read_spin_configuration!(lat,file) # read the spin configurations
-                # do spectroscopy for each tau 
-                println("Doing 2D spectroscopy on $file")
-                @showprogress for (ind,tau) in enumerate(taus)
-                    BA(t) = B(t, tau)
-                    a,b,ab = run2DSpecSingle(lat, ts, tau, BA, BB; kwargs...)
-                    MA[:,:,ind] .= a
-                    MB[:,Nt:end,ind] .= b
-                    MAB[:,:,ind] .= ab
-                end
-    
-                # create a new group or overwrite existing group 
-                println("Writing to $file")
-                res = Dict{String, Any}("ts"=>ts, "taus"=>taus, "MA"=>MA, "MB"=>MB, "MAB"=>MAB)
-                h5open(file, "r+") do f
-                    if haskey(f, "spectroscopy")
-                        g = f["spectroscopy"]
-                        overwrite_keys!(g, res)
-                    else
-                        g = create_group(f, "spectroscopy")
-                        for key in keys(res)
-                            g[key] = res[key]
+                with_logger(logger) do 
+                    lat = read_lattice_stack(file)
+                    read_spin_configuration!(lat,file) # read the spin configurations
+                    # do spectroscopy for each tau 
+                    println("Doing spectroscopy on $file")
+                    t0 = time()
+                    walltime = 0
+                    for (ind,tau) in enumerate(taus)
+                        BA(t) = B(t, tau)
+                        a,b,ab = run2DSpecSingle(lat, ts, tau, BA, BB; kwargs...)
+                        MA[:,:,ind] .= a
+                        MB[:,Nt:end,ind] .= b
+                        MAB[:,:,ind] .= ab
+
+                        if ind % report_interval == 0
+                            elapsed_time = time() - t0
+                            walltime += elapsed_time
+                            average_time = elapsed_time / report_interval 
+                            estimated_remaining_time = average_time * (Nt-1) - walltime 
+
+                            str = ""
+                            str *= "Rank $(rank+1)/$commSize: $file"
+                            str *= "\t\tProgress: $ind/$(Nt-1)"
+                            str *= @sprintf("\t\tTotal elapsed time : %.2f%%\n", walltime)
+                            str *= @sprintf("\t\tAverage time per tau : %.2f%%\n", average_time)
+                            str *= @sprintf("\t\tEstimated time remaining : %.2f%%\n", estimated_remaining_time)
+                            @info str 
+                            t0 = time()
+                        end 
+                    end
+                    walltime += time() - t0
+                    @info "\nCOMPLETED : total wall time $walltime s \n"
+
+                    # create a new group or overwrite existing group 
+                    println("Writing to $file on rank $rank")
+                    res = Dict{String, Any}("ts"=>ts, "taus"=>taus, "MA"=>MA, "MB"=>MB, "MAB"=>MAB)
+                    h5open(file, "r+") do f
+                        if haskey(f, "spectroscopy")
+                            g = f["spectroscopy"]
+                            overwrite_keys!(g, res)
+                        else
+                            g = create_group(f, "spectroscopy")
+                            for key in keys(res)
+                                g[key] = res[key]
+                            end
                         end
                     end
-                end
+                end 
             catch err 
                 println("Something went wrong, pushing $file back to end of stack")
                 pushToStack!(stackfile, file)
                 rethrow(err)
+            finally 
+                close(logio)
             end
         end
         # pull next file from stack 

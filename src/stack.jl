@@ -57,7 +57,7 @@ function lock_file(sharefilename::String)
         while isfile(lockfilename)
             # watch_file will notify if the file status changes, waiting until then
             # here we want to wait for the file to get deleted
-            println("$sharefilename locked, idling...")
+            @info "$sharefilename locked, idling..."
             watch_file(lockfilename, 5.0) # timeout after 5 seconds 
         end
         try
@@ -69,6 +69,7 @@ function lock_file(sharefilename::String)
             # `Filesystem.open` call, we'll get an IOError with error code `UV_EEXIST`.
             # In that case, we loop and try again. 
             if err isa Base.IOError && err.code == Base.UV_EEXIST
+                @debug "Tried to create file when it already exists, looping again."
                 continue
             else
                 rethrow()
@@ -96,6 +97,7 @@ function unlock_file(lockfilehandle, lockfilename)
         close(lockfilehandle)
         Filesystem.unlink(lockfilename)
     catch err 
+        @error "Failed to unlock file $filename"
         rethrow(err)
     end 
 
