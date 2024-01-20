@@ -103,9 +103,9 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                             str = ""
                             str *= "Rank $(rank+1)/$commSize: $file"
                             str *= "\t\tProgress: $ind/$(Nt-1)"
-                            str *= @sprintf("\t\tTotal elapsed time : %.2f%%\n", walltime)
-                            str *= @sprintf("\t\tAverage time per tau : %.2f%%\n", average_time)
-                            str *= @sprintf("\t\tEstimated time remaining : %.2f%%\n", estimated_remaining_time)
+                            str *= @sprintf("\t\tTotal elapsed time : %.2f% s \n", walltime)
+                            str *= @sprintf("\t\tAverage time per tau : %.2f% s \n", average_time)
+                            str *= @sprintf("\t\tEstimated time remaining : %.2f% s \n", estimated_remaining_time)
                             @info str 
                             t0 = time()
                         end 
