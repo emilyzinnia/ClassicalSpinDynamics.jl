@@ -2,7 +2,7 @@ using HDF5
 using MPI 
 using ProgressMeter
 using ClassicalSpinMC: Lattice, read_spin_configuration!, overwrite_keys!
-using Logging 
+using Logging, LoggingExtras
 using Printf
 
 function compute_magnetization(St::Array{Float64,2})::Array{Float64,2}
@@ -77,8 +77,7 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
         else
             # create a new logfile
             logfilename = logfilepath * "/" * basename(file) * ".log"
-            logio = open(logfilename, "w") 
-            logger = debug ? ConsoleLogger(logio, Logging.Debug) : ConsoleLogger(logio, Logging.Info)
+            logger = debug ? ConsoleLogger(stderr, Logging.Debug) : FileLogger(logfilename, append=true)
             try 
                 # initialize lattice by reading lattice metadata from params file
                 with_logger(logger) do 
@@ -133,8 +132,6 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                 println("Something went wrong, pushing $file back to end of stack")
                 pushToStack!(stackfile, file)
                 rethrow(err)
-            finally 
-                close(logio)
             end
         end
         # pull next file from stack 
