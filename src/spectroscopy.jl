@@ -77,7 +77,8 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
         else
             # create a new logfile
             logfilename = logfilepath * "/" * basename(file) * ".log"
-            logger = debug ? ConsoleLogger(stderr, Logging.Debug) : FileLogger(logfilename, append=true)
+            logio = open(logfilename, "w")
+            logger = debug ? ConsoleLogger(stderr, Logging.Debug) : FileLogger(logio)
             try 
                 # initialize lattice by reading lattice metadata from params file
                 with_logger(logger) do 
@@ -132,6 +133,8 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                 println("Something went wrong, pushing $file back to end of stack")
                 pushToStack!(stackfile, file)
                 rethrow(err)
+            finally
+                close(logio)
             end
         end
         # pull next file from stack 
