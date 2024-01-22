@@ -29,7 +29,9 @@ Run 2D spectroscopy for a single delay time tau.
 """
 function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, BA::Function, BB::Function; kwargs...)::NTuple{3, Array{Float64,2}}
     specA  = compute_St(ts, BA, lat; kwargs...)
-    specB  = compute_St(ts[ts .>= 0.0], BB, lat; kwargs...)
+    # specB  = compute_St(ts[ts .>= 0.0], BB, lat; kwargs...)
+    specB  = compute_St(ts, BB, lat; kwargs...)
+
     specAB  = compute_St(ts, BA, BB, lat; kwargs...)
     MA = compute_magnetization(specA)
     MB = compute_magnetization(specB)
@@ -76,7 +78,8 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                     BA(t) = B(t, tau)
                     a,b,ab = run2DSpecSingle(lat, ts, tau, BA, BB; kwargs...)
                     MA[:,:,ind] .= a
-                    MB[:,Nt:end,ind] .= b
+                    # MB[:,Nt:end,ind] .= b
+                    MB[:,:,ind] .= b
                     MAB[:,:,ind] .= ab
 
                     if ind % report_interval == 0
