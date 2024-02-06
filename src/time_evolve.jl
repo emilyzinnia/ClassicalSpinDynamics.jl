@@ -194,7 +194,7 @@ Returns S(t) matrix with dims=(N_t, 3N) where N_t is the number of timesteps and
 - `alpha::Float64=0.0`: damping parameter 
 """
 function compute_St(ts::Array{Float64}, lat::Lattice; 
-                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0)
+                    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, kwargs...)
 
     # time evolve the spins 
     s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
@@ -210,13 +210,13 @@ function compute_St(ts::Array{Float64}, lat::Lattice;
     cb = PresetTimeCallback(ts, perform_measurements!)
     
     # solve ODE 
-    solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false)
+    solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false, kwargs...)
 
     return St 
 end
 
 function compute_St(ts::Array{Float64}, pulseA::Function, pulseB::Function, lat::Lattice; 
-    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0)
+    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, kwargs...)
 
     # time evolve the spins 
     s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
@@ -233,14 +233,14 @@ function compute_St(ts::Array{Float64}, pulseA::Function, pulseB::Function, lat:
     cb = PresetTimeCallback(ts, perform_measurements!)
 
     # solve ODE 
-    solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false)
+    solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false, kwargs...)
 
     return St 
 end
 
 
 function compute_St(ts::Array{Float64}, pulse::Function, lat::Lattice; 
-    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0)
+    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, kwargs...)
 
     # time evolve the spins 
     s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
@@ -257,7 +257,7 @@ function compute_St(ts::Array{Float64}, pulse::Function, lat::Lattice;
     cb = PresetTimeCallback(ts, perform_measurements!)
 
     # solve ODE 
-    solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false)
+    solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false, kwargs...)
 
     return St 
 end

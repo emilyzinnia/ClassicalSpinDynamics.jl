@@ -50,9 +50,11 @@ function run2DSpecStack(stackfile::String, tmin::Float64, tmax::Float64, dt::Flo
     # read spin configurtion based on file from the stack 
     file = pullFromStack!(stackfile)
 
-    MA = zeros(Float64, 3, length(taus), length(taus))
+    Ntau = length(taus)
+    MA = zeros(Float64, 3, Ntau, Ntau)
     MB = copy(MA) 
     MAB = copy(MA)
+    
 
     while length(file) > 0
         f = h5open(file, "r+") 
