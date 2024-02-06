@@ -23,15 +23,12 @@ Run 2D spectroscopy for a single delay time tau.
 # Arguments:
 - `lat::Lattice`: Lattice object containing spin configuration to time evolve
 - `ts::Vector{Float64}`: time array 
-- `tau::Float64`: delay time 
 - `B::Function`: time-dependent function that returns a magnetic field vector 
 - `kwargs`: see `compute_St` documentation 
 """
-function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, BA::Function, BB::Function; kwargs...)::NTuple{3, Array{Float64,2}}
+function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, BA::Function, BB::Function; kwargs...)::NTuple{3, Array{Float64,2}}
     specA  = compute_St(ts, BA, lat; kwargs...)
-    # specB  = compute_St(ts[ts .>= 0.0], BB, lat; kwargs...)
     specB  = compute_St(ts, BB, lat; kwargs...)
-
     specAB  = compute_St(ts, BA, BB, lat; kwargs...)
     MA = compute_magnetization(specA)
     MB = compute_magnetization(specB)
@@ -39,7 +36,7 @@ function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, tau::Float64, BA::Fu
     return MA, MB, MAB
 end
 
-function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Float64}, B::Function, BB::Function; 
+function run2DSpecStack(stackfile::String, tmin::Float64, tmax::Float64, dt::Float64, taus::Vector{Float64}, BA::Function, BB::Function; 
                         override=false, report_interval=100, kwargs...)
     # check if MPI initialized 
     if MPI.Initialized()
@@ -53,10 +50,9 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
     # read spin configurtion based on file from the stack 
     file = pullFromStack!(stackfile)
 
-    MA = zeros(Float64, 3, size(ts)[1], size(taus)[1])
+    MA = zeros(Float64, 3, length(taus), length(taus))
     MB = copy(MA) 
     MAB = copy(MA)
-    Nt = size(taus)[1]+1
 
     while length(file) > 0
         f = h5open(file, "r+") 
@@ -75,18 +71,19 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
                 t0 = time()
                 walltime = 0
                 for (ind,tau) in enumerate(taus)
-                    BA(t) = B(t, tau)
-                    a,b,ab = run2DSpecSingle(lat, ts, tau, BA, BB; kwargs...)
-                    MA[:,:,ind] .= a
-                    # MB[:,Nt:end,ind] .= b
-                    MB[:,:,ind] .= b
-                    MAB[:,:,ind] .= ab
+                    ts = collect(tmin:dt:tmax+tau)  
+                    B(t) = BB(t-tau)
+
+                    a,b,ab = run2DSpecSingle(lat, ts, BA, B; kwargs...)
+                    MA[:,:,ind] .= a[:,(ts .>= tau)]
+                    MB[:,:,ind] .= b[:,(ts .>= tau)]
+                    MAB[:,:,ind] .= ab[:,(ts .>= tau)]
 
                     if ind % report_interval == 0
                         elapsed_time = time() - t0
                         walltime += elapsed_time
                         average_time = elapsed_time / report_interval 
-                        estimated_remaining_time = average_time * (Nt-1) - walltime 
+                        estimated_remaining_time = average_time * Ntau - walltime 
 
                         str = ""
                         str *= "Rank $(rank+1)/$commSize: $file"
@@ -103,7 +100,8 @@ function run2DSpecStack(stackfile::String, ts::Vector{Float64}, taus::Vector{Flo
 
                 # create a new group or overwrite existing group 
                 println("Writing to $file on rank $rank")
-                res = Dict{String, Any}("ts"=>ts, "taus"=>taus, "MA"=>MA, "MB"=>MB, "MAB"=>MAB)
+                res = Dict{String, Any}("tmin"=>tmin, "tmax"=>tmax, "dt"=>dt, "taus"=>taus, 
+                        "MA"=>MA, "MB"=>MB, "MAB"=>MAB)
                 h5open(file, "r+") do f
                     if haskey(f, "spectroscopy")
                         g = f["spectroscopy"]
