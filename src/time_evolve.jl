@@ -58,7 +58,7 @@ end
 """
 Time evolve inhomogeneous ODE for spectroscopy.
 """
-function timeEvolve!(du::Vector{Float64}, u::Vector{Float64}, p::Tuple{Lattice, Float64, Function}, t)
+function timeEvolveTD!(du::Vector{Float64}, u::Vector{Float64}, p::Tuple{Lattice, Float64, Function}, t)
     lat = p[1]
     N = lat.size
     alpha = p[2] 
@@ -154,7 +154,7 @@ function compute_St(ts::Array{Float64}, pulse::Function, lat::Lattice;
     s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
     
     params = (lat, alpha, pulse)
-    prob = ODEProblem(timeEvolve1D!, s0, (min(ts...), max(ts...)), params)
+    prob = ODEProblem(timeEvolveTD!, s0, (min(ts...), max(ts...)), params)
 
     # solve ODE 
     sol = solve(prob, alg, reltol=tol, abstol=tol, save_on=true, dt=dt, kwargs...)
