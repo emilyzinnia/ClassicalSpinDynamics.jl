@@ -6,12 +6,12 @@ using Logging
 using Printf
 
 function compute_magnetization(St::Array{Float64,2})::Array{Float64,2}
-    # St is a t x N matrix 
-    N = Int(size(St)[2]//3)
-    M = zeros(Float64, 3, size(St)[1])
-    M[1,:] .= sum(St[:, 3 * collect(1:N) .- 2], dims=2)
-    M[2,:] .= sum(St[:, 3 * collect(1:N) .- 1], dims=2)
-    M[3,:] .= sum(St[:, 3 * collect(1:N)     ], dims=2)
+    # St is a N x t matrix 
+    N = Int(size(St)[1]//3)
+    M = zeros(Float64, 3, size(St)[2])
+    M[1,:] .= vec(sum(St[3 * collect(1:N) .- 2, :], dims=1))
+    M[2,:] .= vec(sum(St[3 * collect(1:N) .- 1, :], dims=1))
+    M[3,:] .= vec(sum(St[3 * collect(1:N),      :], dims=1))
     return M/N
 end
 
@@ -26,10 +26,10 @@ Run 2D spectroscopy for a single delay time tau.
 - `B::Function`: time-dependent function that returns a magnetic field vector 
 - `kwargs`: see `compute_St` documentation 
 """
-function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, BA::Function, BB::Function; kwargs...)::NTuple{3, Array{Float64,2}}
+function run2DSpecSingle(lat::Lattice, ts::Vector{Float64}, BA::Function, BB::Function, BAB::Function; kwargs...)
     specA  = compute_St(ts, BA, lat; kwargs...)
     specB  = compute_St(ts, BB, lat; kwargs...)
-    specAB  = compute_St(ts, BA, BB, lat; kwargs...)
+    specAB  = compute_St(ts, BAB, lat; kwargs...)
     MA = compute_magnetization(specA)
     MB = compute_magnetization(specB)
     MAB = compute_magnetization(specAB)
@@ -75,8 +75,9 @@ function run2DSpecStack(stackfile::String, tmin::Float64, tmax::Float64, dt::Flo
                 for (ind,tau) in enumerate(taus)
                     ts = collect(tmin:dt:tmax+tau)  
                     B(t) = BB(t-tau)
+                    BAB(t) = BA(t) + B(t)
 
-                    a,b,ab = run2DSpecSingle(lat, ts, BA, B; kwargs...)
+                    a,b,ab = run2DSpecSingle(lat, ts, BA, B, BAB; kwargs...)
                     MA[:,:,ind] .= a[:,(ts .>= tau)]
                     MB[:,:,ind] .= b[:,(ts .>= tau)]
                     MAB[:,:,ind] .= ab[:,(ts .>= tau)]
