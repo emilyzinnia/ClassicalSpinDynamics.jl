@@ -44,8 +44,10 @@ def get_thermal_observables(path):
         if (".h5" in file) & (".params" not in file):
             data = SimData(path+file)
             data.load_group("observables")
-            df.append(data.to_dict(["magnetization", "magnetization_err", 
-                                   "specific_heat", "specific_heat_err",
+            data.data["magnetization"] /= data.params.N
+            data.data["magnetization_err"] /= data.params.N
+            df.append(data.to_dict(["magnetization", "magnetization_err",
+                                    "specific_heat", "specific_heat_err",
                                    "susceptibility", "susceptibility_err", "T"]))
     return pd.DataFrame(df)
 
@@ -56,7 +58,6 @@ def plot_observable(dat, name, color="blue",**kwargs):
     T = npa(dat["T"][idx])
     o = npa(dat[name][idx])
     oerr = npa(dat["{}_err".format(name)][idx])
-
     fig, ax = pl.subplots()
     vertices = np.block([[T, T[::-1]],
                     [(o+oerr), (o-oerr)[::-1]]]).T
@@ -64,4 +65,17 @@ def plot_observable(dat, name, color="blue",**kwargs):
     patch = PathPatch(path_patch, facecolor=color, edgecolor='none', alpha=0.5)
     ax.add_patch(patch)
     ax.plot(T, o, color=color, **kwargs)
+    return fig, ax 
+
+def plot_spin_config(dat, R=np.eye(3)):
+    spins = dat.spins
+    spins_abc = np.einsum("ij,jk", spins, R)
+    pos = dat.site_positions 
+    fig, ax = pl.subplots()
+    # xy projection of the spin configuration
+    ax.quiver(pos[:,0],pos[:,1], spins_abc[:,0], spins_abc[:,2],  
+            pivot='middle', color='red',  scale=10)
+    ax.set_title(r"$xy$ projection", fontsize=12, y=-0.1)
+    ax.set_aspect('equal')
+    ax.set_axis_off()
     return fig, ax 
