@@ -4,16 +4,16 @@ from numpy import array as npa
 from numpy import imag, sqrt, real
 import matplotlib.pyplot as pl 
 from matplotlib import colors 
-from scipy.fft import fftshift, fftfreq, fft2
+from scipy.fft import fftshift, fftfreq, fft2, fft
 from scipy.constants import pi
 from itertools import product
 
 from load import * 
 
 class SpecData(SimData):
-    def __init__(self, filename, R=np.eye(3), bounds=None, legacy=False):
+    def __init__(self, filename, R=np.eye(3), eta=0, bounds=None, legacy=False, groupname="spectroscopy"):
         super().__init__(filename)
-        self.load_group("spectroscopy")
+        self.load_group(groupname)
         # load raw data and rotate it 
         tau = self.data["taus"]
         if legacy:
@@ -33,8 +33,9 @@ class SpecData(SimData):
             self.data["taus"] = tau[taubound]
             data_rotated = [dat[taubound,:,:][:,tbound,:] for dat in data_rotated]
 
+        filter = np.exp(-eta * np.outer(self.data["ts"], self.data["taus"]))
         for i, value in enumerate(data_rotated):
-            self.data[keys[i]] = value
+            self.data[keys[i]] = (value.T * filter ).T
 
         self.data["MNL"] = self.data["MAB"] -  self.data["MA"] - self.data["MB"] 
         self.keys = ("MA", "MB", "MAB", "MNL")
@@ -51,6 +52,28 @@ class SpecData(SimData):
 
         for key,comp in product(self.keys, range(3)):
             self.data["{}_FT_{}".format(key, comp)] = fftshift(fft2(self.data[key][:,:,comp]))
+
+        # for comp in range(3):
+        #     self.data["MNL_FT_{}".format(comp)] = self.data["MAB_FT_{}".format(comp)] - self.data["MB_FT_{}".format(comp)] - self.data["MA_FT_{}".format(comp)]  
+
+def plot_linear_response(simdata, maskorigin=True, label="xyz", **kwargs):
+    # ts = simdata.data["ts"]
+    f_t = simdata.data["f_t"]
+    fig, axs = pl.subplots(1, 3, figsize=(12, 4))
+
+    for i, comp in enumerate(range(3)):
+        MB = simdata.data["MB"][0, :, comp]
+        MBw = fftshift(fft(MB))
+        intensity = sqrt(real(MBw)**2 + imag(MBw)**2)
+        if maskorigin:
+            intensity[f_t == 0.0] = np.NaN
+        axs[i].plot(f_t * 2 * pi, np.log(intensity), color="black", **kwargs)
+        axs[i].set_ylabel(r"log$|M(\omega)|$ (arb.)")
+        axs[i].set_xlabel(r"$\omega/|K|$")
+        axs[i].set_title(r"$M^{}$".format(label[comp]))
+
+    return fig, axs 
+
 
 def plot_2d_spec_time(simdata, comp, **kwargs):
     t = simdata.data["ts"]
@@ -114,27 +137,52 @@ def plot_2d_spec_freq(simdata, comp,  plotreal=True, maskorigin=False, **kwargs)
     
     return fig, axs 
 
-def plot_spec_NL(simdata,plotreal=True, maskorigin=False,label="xyz",**kwargs):
-
+def plot_spec_NL(simdata,plotreal=True, maskorigin=False,label="xyz", comp="all", **kwargs):
+    # hbar = 6.58211957e-13
     data = [simdata.data["MNL_FT_{}".format(comp)] for comp in range(3)]
     f_t = simdata.data["f_t"]
     f_tau = simdata.data["f_tau"]
 
     extent=[2*pi*f_t.min(), 2*pi*f_t.max(), 2*pi*f_tau.min(), 2*pi*f_tau.max()]
+    
 
-    fig, axs = pl.subplots(1, 3, figsize=(12, 6), sharey=True)
-    for comp, ax in enumerate(axs):
+    if comp == "all":
+        fig, axs = pl.subplots(1, 3, figsize=(12, 6), sharey=True)
+        for comp, ax in enumerate(axs):
+            spec = data[comp]
+            # ax.set_title(r"$M^{}_{{NL}}$".format(label[comp]))
+
+            # intensity = real(spec) if plotreal else imag(spec)
+            intensity = sqrt(real(spec)**2 + imag(spec)**2)
+
+            if maskorigin:
+                intensity[f_tau== 0, f_t == 0] = 0.0
+            
+            im = ax.imshow(intensity/intensity.max(), extent=extent,**kwargs)
+
+            ax.set_aspect("equal")
+            cbar = fig.colorbar(im, ax=ax, orientation='horizontal', fraction=0.025)
+            cbar.ax.set_xlabel(r"$|M_{{NL}}^{}(\omega_t,\omega_{{\tau}})|$ (arb.)".format(label[comp]))
+            # fig.colorbar(im, ax=ax, orientation='vertical', fraction=0.05)
+        fig.tight_layout(pad=2.0)
+        
+        return fig, axs
+    elif comp in range(3):
+        fig, ax = pl.subplots()
         spec = data[comp]
-        ax.set_title(r"$M^{}_{{NL}}$".format(label[comp]))
+        # ax.set_title(r"$M^{}_{{NL}}$".format(label[comp]))
 
-        intensity = real(spec) if plotreal else imag(spec)
+        # intensity = real(spec) if plotreal else imag(spec)
+        intensity = sqrt(real(spec)**2 + imag(spec)**2)
         if maskorigin:
             intensity[f_t == 0, f_tau== 0] = 0.0
         
-        im = ax.imshow(intensity, extent=extent,**kwargs)
+        im = ax.imshow(intensity/intensity.max(), extent=extent,**kwargs)
 
         ax.set_aspect("equal")
-        fig.colorbar(im, ax=ax, orientation='vertical', fraction=0.05)
-    fig.tight_layout()
-    
-    return fig, axs
+        cbar = fig.colorbar(im, ax=ax, orientation='horizontal', fraction=0.025)
+        cbar.ax.set_xlabel(r"$|M_{{NL}}^{}(\omega_t,\omega_{{\tau}})|$ (arb.)".format(label[comp]))
+        fig.tight_layout()
+        return fig, ax 
+    else:
+        raise ValueError("comp must be in [0,1,2] or 'all'")
