@@ -9,7 +9,7 @@ export timeEvolve!, timeEvolve2D!, compute_St
 include("spectroscopy.jl")
 export run2DSpecSingle, run2DSpecStack
 
-include("molecular_dynamics.jl")
-export compute_equal_time_correlations, runStaticStructureFactor!, runMolecularDynamics!, compute_static_structure_factor, compute_dynamical_structure_factor
+include("dynamical_spin_correlations.jl")
+export runDSSF!, compute_dynamical_structure_factor
 
 end
