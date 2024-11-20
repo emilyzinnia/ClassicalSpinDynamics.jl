@@ -58,7 +58,7 @@ end
 """
 Time evolve inhomogeneous ODE for spectroscopy.
 """
-function timeEvolveTD!(du::Vector{Float64}, u::Vector{Float64}, p::Tuple{Lattice, Float64, Function}, t)
+function timeEvolveTD!(du::Vector{Float64}, u::Vector{Float64}, p::Tuple{Lattice, Float64, F}, t) where {F}
     lat = p[1]
     N = lat.size
     alpha = p[2] 
@@ -147,8 +147,8 @@ function compute_St(ts::Array{Float64}, lat::Lattice;
     return hcat(sol.u...)
 end
 
-function compute_St(ts::Array{Float64}, pulse::Function, lat::Lattice; 
-    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, dt::Float64=0.25, kwargs...)
+function compute_St(ts::Array{Float64}, pulse::F, lat::Lattice;  
+    alg=Tsit5(), tol::Float64=1e-7, alpha::Float64=0.0, dt::Float64=0.25, kwargs...) where {F}
 
     # time evolve the spins 
     s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
