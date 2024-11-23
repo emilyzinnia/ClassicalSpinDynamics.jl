@@ -65,7 +65,7 @@ function compute_Sqw(lat::Lattice, md::MDbuffer, alg=Tsit5(), tol::Float64=1e-7)
     cb = PresetTimeCallback(md.tt, perform_measurements!)
     
     # solve ODE 
-    sol = solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false)
+    sol = solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false, dt=md.tstep)
     return Sqw[3 * collect(1:N_k) .- 2, :], Sqw[3 * collect(1:N_k) .- 1, :], Sqw[3 * collect(1:N_k) , :] 
 end
 
