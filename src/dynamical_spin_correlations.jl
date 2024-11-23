@@ -152,7 +152,7 @@ function runDSSF!(path::String, tstep::Real, tmin::Real, tmax::Real, lat::Lattic
     for i in 1:N_per_rank
         # initialize lattice object from hdf5 file 
         file = string(path, "IC_$IC.h5") 
-        read_spin_configuration!(file, lat)
+        read_spin_configuration!(lat, file)
         
         f = h5open(file, "r+") 
         exists = haskey(f, "spin_correlations")
