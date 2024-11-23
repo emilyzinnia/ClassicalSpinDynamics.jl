@@ -34,7 +34,7 @@ Computes S(q,ω) from spin configuration
 function compute_Sqw(lat::Lattice, md::MDbuffer, alg=Tsit5(), tol::Float64=1e-7)
     # time evolve the spins 
     s0 = vcat(lat.spins...)   # flatten to vector of (Sx1, Sy1, Sz1...)
-    params = [lat.size, lat.interaction_sites, lat.interaction_matrices, lat.field, md.alpha]
+    params = [lat, md.alpha]
     ks = md.ks
     N_k = size(ks)[2]
     pos = lat.site_positions
