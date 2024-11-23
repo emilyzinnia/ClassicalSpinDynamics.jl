@@ -163,7 +163,7 @@ function runDSSF!(path::String, tstep::Real, tmin::Real, tmax::Real, lat::Lattic
             continue
         else
             println("Time evolving for IC $i/$N_per_rank on rank $rank")
-            @time S_t = compute_time_evolution(lat, MD, alg, tol)
+            @time S_t = compute_Sqw(lat, MD, alg, tol)
             corr = compute_FT_correlations(S_t, lat, MD)
 
             println("Writing IC $IC to file on rank $rank")
