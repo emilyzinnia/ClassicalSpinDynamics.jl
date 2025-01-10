@@ -4,7 +4,7 @@ include("stack.jl")
 export pushToStack!, pullFromStack!
 
 include("time_evolve.jl")
-export timeEvolve!, timeEvolve2D!, compute_St
+export timeEvolve!, timeEvolve2D!, compute_St, timeEvolveHigherOrder!
 
 include("spectroscopy.jl")
 export run2DSpecSingle, run2DSpecStack

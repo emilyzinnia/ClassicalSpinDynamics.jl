@@ -42,6 +42,12 @@ function compute_Sqw(lat::Lattice, md::MDbuffer, alg=Tsit5(), tol::Float64=1e-7)
     Sqw = zeros(ComplexF64, 3N_k, length(omega))
     spins = zeros(Float64, 3, lat.size)
 
+    if (length(lat.cubic_sites[1]) == 0) | (length(lat.quartic_sites[1]) == 0) 
+        timeEvolution = timeEvolve!
+    else
+        timeEvolution = timeEvolveHigherOrder!
+    end
+
     function perform_measurements!(integrator)
         t = integrator.t
         spins[1,:] .= integrator.u[3 * collect(1:lat.size) .- 2] #sx
@@ -61,7 +67,7 @@ function compute_Sqw(lat::Lattice, md::MDbuffer, alg=Tsit5(), tol::Float64=1e-7)
         end
     end
 
-    prob = ODEProblem(timeEvolve!, s0, (md.tmin, md.tmax), params)
+    prob = ODEProblem(timeEvolution, s0, (md.tmin, md.tmax), params)
     cb = PresetTimeCallback(md.tt, perform_measurements!)
     
     # solve ODE 
