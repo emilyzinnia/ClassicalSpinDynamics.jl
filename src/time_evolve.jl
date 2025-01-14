@@ -1,6 +1,7 @@
 using DifferentialEquations
 using Einsum
 using ClassicalSpinMC: Lattice, read_spin_configuration!, get_bilinear_sites, get_bilinear_matrices, get_onsite, get_field
+using ClassicalSpinMC: get_cubic_sites, get_cubic_tensors, get_quartic_sites, get_quartic_tensors
 
 """
 Time evolve bilinear homogeneous ODE. 
