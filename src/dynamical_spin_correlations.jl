@@ -42,9 +42,7 @@ function compute_Sqw(lat::Lattice, md::MDbuffer, alg=Tsit5(), tol::Float64=1e-7)
     Sqw = zeros(ComplexF64, 3N_k, length(omega))
     spins = zeros(Float64, 3, lat.size)
 
-    println((length(lat.cubic_sites[1]) == 0) | (length(lat.quartic_sites[1]) == 0) )
     if (length(lat.cubic_sites[1]) != 0) | (length(lat.quartic_sites[1]) != 0) 
-        println("Time evolving with higher order terms!")
         timeEvolution = timeEvolveHigherOrder!
     else
         timeEvolution = timeEvolve!
