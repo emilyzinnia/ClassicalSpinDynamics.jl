@@ -33,6 +33,9 @@ function timeEvolve!(du::Vector{Float64}, u::Vector{Float64}, p::Tuple{Lattice, 
         for n in eachindex(js)
             J = Js[n]
             j = js[n]
+            if js[n] == 0 
+                continue
+            end
             ux = u[3j-2]
             uy = u[3j-1]
             uz = u[3j]
@@ -90,6 +93,9 @@ function timeEvolveHigherOrder!(du::Vector{Float64}, u::Vector{Float64}, p::Tupl
         for n in eachindex(js)
             J = Js[n]
             j = js[n]
+            if js[n] == 0 
+                continue
+            end
             ux = u[3j-2]
             uy = u[3j-1]
             uz = u[3j]
@@ -103,6 +109,9 @@ function timeEvolveHigherOrder!(du::Vector{Float64}, u::Vector{Float64}, p::Tupl
         for n in eachindex(cs)
             C = Cs[n]
             j, k = cs[n]
+            if cs[n] == (0,0)
+                continue
+            end
             sj = [u[3j-2], u[3j-1], u[3j]]
             sk =  [u[3k-2], u[3k-1], u[3k]]
             @einsum Hx += C[1, a, b] * sj[a] * sk[b]
@@ -114,6 +123,9 @@ function timeEvolveHigherOrder!(du::Vector{Float64}, u::Vector{Float64}, p::Tupl
         for n in eachindex(rs)
             R = Rs[n]
             j, k, l = rs[n]
+            if rs[n] == (0,0,0)
+                continue
+            end
             sj = [u[3j-2], u[3j-1], u[3j]]
             sk =  [u[3k-2], u[3k-1], u[3k]]
             sl =  [u[3l-2], u[3l-1], u[3l]]
@@ -169,6 +181,9 @@ function timeEvolveTD!(du::Vector{Float64}, u::Vector{Float64}, p::Tuple{Lattice
         for n in eachindex(js)
             J = Js[n]
             j = js[n]
+            if js[n] == 0 
+                continue
+            end
             ux = u[3j-2]
             uy = u[3j-1]
             uz = u[3j]
