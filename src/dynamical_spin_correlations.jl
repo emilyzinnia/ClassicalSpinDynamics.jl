@@ -178,7 +178,7 @@ function runDSSF!(path::String, tstep::Real, tmin::Real, tmax::Real, lat::Lattic
             # compute total correlations 
             corr = compute_FT_correlations(S_qw)
             println("Writing IC $IC to file on rank $rank")
-            res = Dict("corr"=>corr, "freq"=>MD.freq, "momentum"=>ks, "S_qw"=>S_qw)
+            res = Dict("corr"=>corr, "freq"=>MD.freq, "momentum"=>ks, "Sx_qw"=>S_qw[1], "Sy_qw"=>S_qw[2], "Sz_qw"=>S_qw[3])
             h5open(file, "r+") do f
                 g = haskey(f, "spin_correlations") ? f["spin_correlations"] : create_group(f, "spin_correlations")
                 overwrite_keys!(g, res)
@@ -207,7 +207,7 @@ function compute_dynamical_structure_factor(path::String, dest::String, params::
     files = readdir(path)
     f0 = h5open(string(path, files[1]), "r")
     shape = size(read(f0["spin_correlations/corr"]) )
-    shape_Sq = size(read(f0["spin_correlations/S_qw"]) )
+    shape_Sq = size(read(f0["spin_correlations/Sx_qw"]) )
     ks = read(f0["spin_correlations/momentum"])
     freq = read(f0["spin_correlations/freq"])
     close(f0)
@@ -219,7 +219,7 @@ function compute_dynamical_structure_factor(path::String, dest::String, params::
     for file in files 
         h5open(string(path, file), "r") do f 
             Suv = read(f["spin_correlations/corr"])
-            Sqw = read(f["spin_correlations/S_qw"])
+            Sqw = (read(f["spin_correlations/Sx_qw"]), read(f["spin_correlations/Sy_qw"]), read(f["spin_correlations/Sz_qw"]))
             push!(DSF, Suv)
             push!(DSF_disc, Sqw)
         end
