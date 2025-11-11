@@ -72,14 +72,18 @@ function compute_Sqw(lat::Lattice, md::MDbuffer, alg=Tsit5(), tol::Float64=1e-7)
     
     # solve ODE 
     sol = solve(prob, alg, reltol=tol, abstol=tol, callback=cb, dense=false, save_on=false, dt=md.tstep)
+
+    # normalize S(q,ω)
+    norm = sqrt(length(md.tt) * 2 * pi * lat.size )
+    Sqw ./= norm
+
     return Sqw[3 * collect(1:N_k) .- 2, :], Sqw[3 * collect(1:N_k) .- 1, :], Sqw[3 * collect(1:N_k) , :] 
 end
 
 # do this step in parallel 
-function compute_FT_correlations(S_q::NTuple{3, Array{ComplexF64, 2}}, lat::Lattice, md::MDbuffer)
-    N_k = size(md.ks)[2]
-    Suv = zeros(Float64, 9, N_k, length(md.freq)) # store SSF results
+function compute_FT_correlations(S_q::NTuple{3, Array{ComplexF64, 2}})
     sx, sy, sz = S_q 
+    Suv = zeros(Float64, 9, size(sx)...) # store SSF results
     
     sx_ = conj.(sx)
     sy_ = conj.(sy)
@@ -95,7 +99,7 @@ function compute_FT_correlations(S_q::NTuple{3, Array{ComplexF64, 2}}, lat::Latt
     Suv[7, :, :] .= real.(sz .* sx_)
     Suv[8, :, :] .= real.(sz .* sy_)
     Suv[9, :, :] .= real.(sz .* sz_)
-    return  Suv ./ (2*lat.size*pi)
+    return  Suv 
 end
 
 """
@@ -169,11 +173,12 @@ function runDSSF!(path::String, tstep::Real, tmin::Real, tmax::Real, lat::Lattic
             continue
         else
             println("Time evolving for IC $i/$N_per_rank on rank $rank")
-            @time S_t = compute_Sqw(lat, MD, alg, tol)
-            corr = compute_FT_correlations(S_t, lat, MD)
+            @time S_qw = compute_Sqw(lat, MD, alg, tol)
 
+            # compute total correlations 
+            corr = compute_FT_correlations(S_qw)
             println("Writing IC $IC to file on rank $rank")
-            res = Dict("S_qw"=>corr, "freq"=>MD.freq, "momentum"=>ks)
+            res = Dict("corr"=>corr, "freq"=>MD.freq, "momentum"=>ks, "S_qw"=>S_qw)
             h5open(file, "r+") do f
                 g = haskey(f, "spin_correlations") ? f["spin_correlations"] : create_group(f, "spin_correlations")
                 overwrite_keys!(g, res)
@@ -201,25 +206,33 @@ function compute_dynamical_structure_factor(path::String, dest::String, params::
     println("Initializing LogBinner in $path")
     files = readdir(path)
     f0 = h5open(string(path, files[1]), "r")
-    shape = size(read(f0["spin_correlations/S_qw"]) )
+    shape = size(read(f0["spin_correlations/corr"]) )
+    shape_Sq = size(read(f0["spin_correlations/S_qw"]) )
     ks = read(f0["spin_correlations/momentum"])
     freq = read(f0["spin_correlations/freq"])
     close(f0)
     DSF = LogBinner(zeros(Float64, shape...))
+    DSF_disc = LogBinner(zeros(Float64, shape_Sq...))
 
     # collecting correlations
     println("Collecting correlations from ", length(files), " files")
     for file in files 
         h5open(string(path, file), "r") do f 
-            Suv = read(f["spin_correlations/S_qw"])
+            Suv = read(f["spin_correlations/corr"])
+            Sqw = read(f["spin_correlations/S_qw"])
             push!(DSF, Suv)
+            push!(DSF_disc, Sqw)
         end
     end
 
+    total = mean(DSF)
+    disc = compute_FT(mean(DSF_disc))
+    conn = total .- disc
     # write to configuration file 
     println("Writing to $dest")
     d = h5open(dest, "r+")
-    res = Dict("freq"=>freq, "momentum"=>ks,  "S_qw"=>mean(DSF))
+    res = Dict( "freq"=>freq, "momentum"=>ks,  "total"=>total, 
+                "disconnected"=> disc, "connected"=> conn)
     g = haskey(d, "spin_correlations") ? d["spin_correlations"] : create_group(d, "spin_correlations")
     overwrite_keys!(g, params)
     overwrite_keys!(g, res)
@@ -227,6 +240,3 @@ function compute_dynamical_structure_factor(path::String, dest::String, params::
 
     println("Successfully averaged ",length(files), " files")
 end
-
-
-
