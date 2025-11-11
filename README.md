@@ -5,6 +5,7 @@ This package is for simulating various dynamical quantities of classical spin sy
 ## Prerequisites 
 * `OpenMPI` or `IntelMPI`. The package uses `MPI.jl`, so on a cluster you may need to configure your MPI Julia installation to use the system-provided MPI backend. See the [MPI.jl documentation](https://juliaparallel.org/MPI.jl/stable/configuration/) for details. 
 * `HDF5`
+* `DifferentialEquations.jl` for controlling the solver algorithm used in solving the ODEs.
 
 
 ## Installation 
