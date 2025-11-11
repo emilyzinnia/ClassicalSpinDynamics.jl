@@ -201,7 +201,7 @@ Averages over all spin correlations in a given path.
 - `dest::String`: path to write out final DSSF to 
 - `params::Dict{String,Float64}`: human readable dictionary of parameters to write out 
 """
-function compute_dynamical_structure_factor(path::String, dest::String, params::Dict{String, Float64}=Dict{String,Float64}())
+function compute_dynamical_structure_factor(path::String, dest::String, params::Dict{String, <:Any}=Dict{String,<:Any}())
     # initialize LogBinner
     println("Initializing LogBinner in $path")
     files = readdir(path)
