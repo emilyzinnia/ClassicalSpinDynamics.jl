@@ -6,6 +6,7 @@ using ProgressMeter
 using LinearAlgebra
 using ClassicalSpinMC: Lattice, get_interaction_sites, get_interaction_matrices, get_field, timeEvolve!, read_spin_configuration!
 using Logging, LoggingExtras
+using Einsum
 include("stack.jl")
 
 function crosst(a::NTuple{3,Real}, b::NTuple{3,Real})
@@ -18,6 +19,9 @@ function interaction_matrix(Hij)
     Hij.m31 Hij.m32 Hij.m33]
 end
 
+"""
+Computes the energy current for cubic interactions. Note: Presence of both cubic and Zeeman interactions is not supported.
+"""
 function compute_energy_current(i::Int64, lat::Lattice, St::Array{Float64,1})::Tuple{Float64, Float64}
     js = lat.interaction_sites[i]
     Js = lat.interaction_matrices[i]
@@ -116,6 +120,72 @@ function compute_energy_magnetization(lat::Lattice)
         jEyx += pos[1, i] * Ji[2]
     end
     return -2 * jExy , -2 * jEyx
+end
+
+
+function compute_energy_current_cubic(i::Int64, lat::Lattice, St::Array{Float64,1})::Tuple{Float64, Float64}
+    js = lat.interaction_sites[i]
+    Js = lat.interaction_matrices[i]
+    cs = lat.cubic_sites[i]
+    Cs = lat.cubic_matrices[i]
+
+    Si = (St[3i-2], St[3i-1], St[3i])
+    pos = lat.site_positions
+    rij = zeros(Float64, 2)
+    ji = zeros(Float64, 2)
+
+    Hi = get_local_field(lat, i)
+    
+    # quadratic term 
+    for n in eachindex(js)
+        Hij = Js[n]
+        j = js[n]
+        Sj = (St[3j-2], St[3j-1], St[3j])
+        rij .= pos[:,j] - pos[:,i]
+        Jij = 0.0
+        Hj = get_local_field(lat, j)
+        
+        # (HijSj)
+        pre0 = (Hij.m11*Sj[1]+Hij.m12*Sj[2]+Hij.m13*Sj[3], 
+                Hij.m21*Sj[1]+Hij.m22*Sj[2]+Hij.m23*Sj[3], 
+                Hij.m31*Sj[1]+Hij.m32*Sj[2]+Hij.m33*Sj[3])
+
+        # transpose(Si)Hij
+        pre1 = (Hij.m11*Si[1]+Hij.m21*Si[2]+Hij.m31*Si[3], 
+                Hij.m12*Si[1]+Hij.m22*Si[2]+Hij.m32*Si[3], 
+                Hij.m13*Si[1]+Hij.m23*Si[2]+Hij.m33*Si[3])
+
+        Jij += 1/2 * (dot(Hi, crosst(pre0, Si)) +  dot(Hj, crosst(pre1, Sj)))
+
+        ji .+= rij * Jij
+    end
+
+    # cubic term
+    for n in eachindex(cs)
+        C = Cs[n]
+        j, k = cs[n]
+        if cs[n] == (0,0)
+            continue
+        end
+        Sj = (St[3j-2], St[3j-1], St[3j])
+        Sk = (St[3k-2], St[3k-1], St[3k])
+        rij .= pos[:,j] - pos[:,i]
+        Jij = 0.0
+
+        Hj = get_local_field(lat, j)
+        Hk = get_local_field(lat, k)
+
+        @einsum Ci := C[a, b, c] * Sj[b] * Sk[c] 
+        @einsum Cj := C[a, b, c] * Si[a] * Sk[c]
+        @einsum Ck := C[a, b, c] * Si[a] * Sj[b]
+        Jij += 1/3 *  (dot( crosst(Si, Hi), Ci) + 
+                       dot( crosst(Sj, Hj), Cj) + 
+                       dot( crosst(Sk, Hk), Ck) )
+
+        ji .+= rij * Jij
+    end
+
+    return ji[1], ji[2]
 end
 
 function runTransportSingle!(file, dt, tmax, lat::Lattice, alpha::Float64=0.01, override=false, kubo=true)
